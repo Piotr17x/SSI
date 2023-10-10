@@ -12,6 +12,63 @@ kat_zasieg = 360
 ruch_skok = 5
 
 
+def skret_prawo(kat):
+    return np.exp(-((kat-90)/50)**2)
+
+
+def lewa_czesc(x):
+    return np.exp(-((x+np.abs(x_min+rampa_lewy)/2)/30)**2)
+
+
+def prawa_czesc(x):
+    return np.exp(-((x-np.abs(x_max+rampa_prawy)/2)/30)**2)
+
+
+def srodek(x):
+    return np.exp(-((x)/30)**2)
+
+
+def skret_lewo(kat):
+    return np.exp(-((kat + 90) / 50) ** 2)
+
+
+def skret_srodek(x):
+    return np.exp(-((x)/50)**2)
+
+
+def gora(y):
+    return np.exp(-((y + np.abs(y_max + y_min)/4) / 30) ** 2)
+
+
+def dol(y):
+    return np.exp(-((y + np.abs(y_max + y_min)/4*3) / 30) ** 2)
+
+
+def get_skret(x1, y, kat):
+    skret = (
+            lewa_czesc(x1) * skret_prawo(kat) * gora(y) * 4
+            + lewa_czesc(x1) * skret_srodek(kat) * 20
+            + lewa_czesc(x1) * skret_prawo(kat) * dol(y) * 0
+            + srodek(x1) * skret_srodek(kat) * 0
+            + srodek(x1) * skret_prawo(kat) * (-20)
+            + srodek(x1) * skret_lewo(kat) * 20
+            + prawa_czesc(x1) * skret_srodek(kat) * (-20)
+            + prawa_czesc(x1) * skret_lewo(kat) * gora(y) * (-4)
+            + prawa_czesc(x1) * skret_lewo(kat) * dol(y) * 0
+    ) / (
+            lewa_czesc(x1) * skret_prawo(kat) * gora(y)
+            + lewa_czesc(x1) * skret_srodek(kat)
+            + lewa_czesc(x1) * skret_prawo(kat) * dol(y)
+            + srodek(x1) * skret_srodek(kat)
+            + srodek(x1) * skret_prawo(kat)
+            + srodek(x1) * skret_lewo(kat)
+            + prawa_czesc(x1) * skret_srodek(kat)
+            + prawa_czesc(x1) * skret_lewo(kat) * gora(y)
+            + prawa_czesc(x1) * skret_lewo(kat) * dol(y)
+    )
+    return skret
+
+
 class PojazdPolozenie:
     def __init__(self, x, y, kat):
         self.x = x
@@ -19,37 +76,9 @@ class PojazdPolozenie:
         self.kat = kat
         plt.scatter(x, y, marker='D')
 
-    def get_turn(self, goal):
-        goal = (goal + 360) % 360
-        kat = (self.kat + 360) % 360
-        if kat > 180 and goal == 0:
-            goal = 360
-        if goal < kat:
-            ob = goal - kat
-            return ob if ob >= obrot_min else obrot_min
-        elif goal > kat:
-            ob = goal - kat
-            return ob if ob <= obrot_max else obrot_max
-        return 0
-
     def zwroc_obrot(self):
-        if self.x <= rampa_lewy:
-            if self.y >= y_min/2:
-                obrot = self.get_turn(135)
-            else:
-                obrot = self.get_turn(90)
-        elif rampa_lewy < self.x <= rampa_prawy:
-            obrot = self.get_turn(0)
-        elif rampa_prawy < self.x:
-            if self.y >= y_min/2:
-                obrot = self.get_turn(-135)
-            else:
-                obrot = self.get_turn(-90)
+        obrot = get_skret(self.x, self.y, self.kat)
         self.kat += obrot
-        if self.kat < kat_min:
-            self.kat += kat_zasieg
-        elif self.kat > kat_max:
-            self.kat -= kat_zasieg
 
     def ruch(self):
         self.x += (ruch_skok * np.sin(np.radians(self.kat / np.pi)*np.pi))
